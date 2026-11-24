@@ -31,26 +31,28 @@ def main() -> None:
     soup = BeautifulSoup(response.text, "html.parser")
     visible_text = " ".join(soup.get_text().split()).lower()
 
+    # Sayfanın gerçekten yüklendiğini doğrulamak için temel kontrol
     page_loaded_properly = ("rossmann" in visible_text) and ("advent calendar" in visible_text)
     if not page_loaded_properly:
-        print("Sayfa beklenen ürün içeriğini döndürmedi (koruma veya eksik yanıt olabilir). Alarm verilmedi.")
+        print("Sayfa beklenen ürün içeriğini döndürmedi. Alarm verilmedi.")
         return
 
+    # Sayfada stok bittiğinde çıkan gerçek ifade
     out_of_stock_phrases = [
+        "stokta olduğunda bana bildir",
         "stokta yok",
         "tükendi",
-        "stokta bulunmamaktadır",
     ]
 
     is_out_of_stock = any(phrase in visible_text for phrase in out_of_stock_phrases)
 
-    if not is_out_of_stock:
+    if is_out_of_stock:
+        print("Ürün hala stokta yok ('stokta olduğunda bana bildir' görüldü).")
+    else:
         send_telegram(
-            "🚨 Rossmann Advent Calendar 2027 stokta görünüyor!\n"
+            "🚨 Rossmann Advent Calendar 2027 STOKTA OLABİLİR!\n"
             f"Hemen kontrol et: {URL}"
         )
-    else:
-        print("Sayfa doğrulandı, ürün hala stokta yok.")
 
 if __name__ == "__main__":
     main()
