@@ -28,22 +28,32 @@ def send_telegram(message: str) -> None:
 
 def main() -> None:
     response = requests.get(URL, headers=HEADERS, timeout=20)
-    print("HTTP Status:", response.status_code)
-    print("HTML Length:", len(response.text))
+    response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
     visible_text = " ".join(soup.get_text().split()).lower()
 
-    print("Rossmann var mi:", "rossmann" in visible_text)
-    print("Advent calendar var mi:", "advent calendar" in visible_text)
-    print("Bildir ifadesi var mi:", "bana bildir" in visible_text or "stokta olduğunda" in visible_text)
-    print("Metin onizleme:", visible_text[:600])
+    page_loaded_properly = ("rossmann" in visible_text) and ("advent calendar" in visible_text)
+    if not page_loaded_properly:
+        print("Sayfa beklenen ürün içeriğini döndürmedi. Alarm verilmedi.")
+        return
 
-    # Şimdilik yanlış alarm vermesin diye mesaj göndermeyi kapalı tutuyoruz
-    if ("bana bildir" in visible_text) or ("stokta olduğunda" in visible_text):
-        print("SONUC: Hala stokta yok.")
+    out_of_stock_phrases = [
+        "stokta olduğunda bana bildir",
+        "bana bildir",
+        "stokta yok",
+        "tükendi",
+    ]
+
+    is_out_of_stock = any(phrase in visible_text for phrase in out_of_stock_phrases)
+
+    if is_out_of_stock:
+        print("Sayfa doğrulandı, ürün hala stokta yok.")
     else:
-        print("SONUC: 'bana bildir' metni bulunamadi (ya stok acildi ya da sayfa JS ile yukleniyor).")
+        send_telegram(
+            "🚨 Rossmann Advent Calendar 2027 STOKTA OLABİLİR!\n"
+            f"Hemen kontrol et: {URL}"
+        )
 
 if __name__ == "__main__":
     main()
