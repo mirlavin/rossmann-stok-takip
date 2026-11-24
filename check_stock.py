@@ -8,10 +8,12 @@ CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
-        "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/131.0.0.0 Safari/537.36"
     ),
-    "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.8",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
 }
 
 def send_telegram(message: str) -> None:
@@ -26,33 +28,22 @@ def send_telegram(message: str) -> None:
 
 def main() -> None:
     response = requests.get(URL, headers=HEADERS, timeout=20)
-    response.raise_for_status()
+    print("HTTP Status:", response.status_code)
+    print("HTML Length:", len(response.text))
 
     soup = BeautifulSoup(response.text, "html.parser")
     visible_text = " ".join(soup.get_text().split()).lower()
 
-    # Sayfanın gerçekten yüklendiğini doğrulamak için temel kontrol
-    page_loaded_properly = ("rossmann" in visible_text) and ("advent calendar" in visible_text)
-    if not page_loaded_properly:
-        print("Sayfa beklenen ürün içeriğini döndürmedi. Alarm verilmedi.")
-        return
+    print("Rossmann var mi:", "rossmann" in visible_text)
+    print("Advent calendar var mi:", "advent calendar" in visible_text)
+    print("Bildir ifadesi var mi:", "bana bildir" in visible_text or "stokta olduğunda" in visible_text)
+    print("Metin onizleme:", visible_text[:600])
 
-    # Sayfada stok bittiğinde çıkan gerçek ifade
-    out_of_stock_phrases = [
-        "stokta olduğunda bana bildir",
-        "stokta yok",
-        "tükendi",
-    ]
-
-    is_out_of_stock = any(phrase in visible_text for phrase in out_of_stock_phrases)
-
-    if is_out_of_stock:
-        print("Ürün hala stokta yok ('stokta olduğunda bana bildir' görüldü).")
+    # Şimdilik yanlış alarm vermesin diye mesaj göndermeyi kapalı tutuyoruz
+    if ("bana bildir" in visible_text) or ("stokta olduğunda" in visible_text):
+        print("SONUC: Hala stokta yok.")
     else:
-        send_telegram(
-            "🚨 Rossmann Advent Calendar 2027 STOKTA OLABİLİR!\n"
-            f"Hemen kontrol et: {URL}"
-        )
+        print("SONUC: 'bana bildir' metni bulunamadi (ya stok acildi ya da sayfa JS ile yukleniyor).")
 
 if __name__ == "__main__":
     main()
