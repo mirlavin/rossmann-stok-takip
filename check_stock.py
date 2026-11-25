@@ -1,10 +1,14 @@
 import os
+import time
 import requests
 from bs4 import BeautifulSoup
 
 URL = "https://www.rossmann.com.tr/rossmann-advent-calendar-2027-1-adet-p-kt26100299"
 BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+
+INTERVAL_SECONDS = 300  # 5 dakika = 300 saniye
+MAX_RUNTIME_SECONDS = 5 * 3600 + 50 * 60  # GitHub 6 saat limitinden önce güvenli kapanış
 
 HEADERS = {
     "User-Agent": (
@@ -26,7 +30,7 @@ def send_telegram(message: str) -> None:
     resp = requests.post(api_url, json=payload, timeout=15)
     resp.raise_for_status()
 
-def main() -> None:
+def check_once() -> None:
     response = requests.get(URL, headers=HEADERS, timeout=20)
     response.raise_for_status()
 
@@ -54,6 +58,21 @@ def main() -> None:
             "🚨 Rossmann Advent Calendar 2027 STOKTA OLABİLİR!\n"
             f"Hemen kontrol et: {URL}"
         )
+
+def main() -> None:
+    start_time = time.monotonic()
+    while True:
+        try:
+            check_once()
+        except Exception as exc:
+            print(f"Kontrol sırasında hata oluştu: {exc}")
+
+        elapsed = time.monotonic() - start_time
+        if elapsed + INTERVAL_SECONDS >= MAX_RUNTIME_SECONDS:
+            print("Güvenli süre sınırına yaklaşıldı, döngü sonlandırılıyor.")
+            break
+
+        time.sleep(INTERVAL_SECONDS)
 
 if __name__ == "__main__":
     main()
